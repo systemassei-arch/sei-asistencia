@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#0a1628"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="SEI Asistencia"/>
+<title>SEI — Control de Asistencia</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+<style>
+/* ═══════════════════════════════════════════════
+   VARIABLES Y RESET
+═══════════════════════════════════════════════ */
+:root {
+  --navy:      #0a1628;
+  --navy-2:    #0f2040;
+  --navy-3:    #162d55;
+  --blue:      #1a6fdb;
+  --blue-glow: #2d8aff;
+  --cyan:      #00d4ff;
+  --cyan-dim:  #00a8cc;
+  --amber:     #f5a623;
+  --red:       #e8394a;
+  --green:     #00c97a;
+  --text:      #e8eef8;
+  --text-dim:  #7a90b0;
+  --border:    rgba(255,255,255,0.08);
+  --card:      rgba(15,32,64,0.85);
+  --glass:     rgba(255,255,255,0.04);
+  --shadow:    0 8px 32px rgba(0,0,0,0.4);
+  --r:         12px;
+  --font-head: 'Barlow Condensed', sans-serif;
+  --font-body: 'Barlow', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-body);
+  background: var(--navy);
+  color: var(--text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════════
+   FONDO ANIMADO
+═══════════════════════════════════════════════ */
+#bg {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(26,111,219,0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 90%, rgba(0,212,255,0.1) 0%, transparent 50%),
+    linear-gradient(180deg, #0a1628 0%, #060e1c 100%);
+}
+#bg::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px);
+}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT PRINCIPAL
+═══════════════════════════════════════════════ */
+#app {
+  position: relative; z-index: 1;
+  height: 100%; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════
+   VISTAS (PANTALLAS)
+═══════════════════════════════════════════════ */
+.vista {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.vista.activa { display: flex; animation: slideIn 0.3s ease; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════════ */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,22,40,0.9);
+  backdrop-filter: blur(12px);
+  flex-shrink: 0;
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-logo {
+  font-family: var(--font-head);
+  font-size: 22px; font-weight: 800; letter-spacing: 2px;
+  color: var(--cyan);
+}
+.topbar-logo span { color: var(--text-dim); font-weight: 400; }
+.topbar-user {
+  font-size: 13px; color: var(--text-dim);
+  text-align: right; line-height: 1.3;
+}
+.topbar-user strong { color: var(--text); display: block; }
+
+.btn-icon {
+  background: var(--glass); border: 1px solid var(--border);
+  color: var(--text-dim); border-radius: 8px;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; transition: all 0.2s;
+}
+.btn-icon:active { transform: scale(0.92); background: var(--navy-3); }
+
+/* ═══════════════════════════════════════════════
+   CONTENIDO SCROLL
+═══════════════════════════════════════════════ */
+.contenido {
+  flex: 1; overflow-y: auto; padding: 20px 16px 100px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ═══════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+  backdrop-filter: blur(8px);
+  margin-bottom: 14px;
+}
+.card-title {
+  font-family: var(--font-head);
+  font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+/* ═══════════════════════════════════════════════
+   BOTONES
+═══════════════════════════════════════════════ */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 14px 20px;
+  border-radius: var(--r); border: none;
+  font-family: var(--font-head); font-size: 16px;
+  font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  cursor: pointer; transition: all 0.18s; position: relative; overflow: hidden;
+}
+.btn:active { transform: scale(0.97); }
+.btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(255,255,255,0.1); opacity: 0;
+  transition: opacity 0.15s;
+}
+.btn:active::after { opacity: 1; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue) 0%, #1055b0 100%);
+  color: white;
+  box-shadow: 0 4px 20px rgba(26,111,219,0.35);
+}
+.btn-cyan {
+  background: linear-gradient(135deg, #007aaa 0%, var(--cyan-dim) 100%);
+  color: white;
+  box-shadow: 0 4px 20px rgba(0,212,255,0.2);
+}
+.btn-green {
+  background: linear-gradient(135deg, #007a4a 0%, var(--green) 100%);
+  color: white;
+  box-shadow: 0 4px 20px rgba(0,201,122,0.25);
+}
+.btn-amber {
+  background: linear-gradient(135deg, #c07800 0%, var(--amber) 100%);
+  color: white;
+  box-shadow: 0 4px 20px rgba(245,166,35,0.25);
+}
+.btn-red {
+  background: linear-gradient(135deg, #a01828 0%, var(--red) 100%);
+  color: white;
+}
+.btn-ghost {
+  background: var(--glass); border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.btn-sm {
+  padding: 9px 16px; font-size: 13px;
+  border-radius: 8px; width: auto;
+}
+.btn:disabled {
+  opacity: 0.4; cursor: not-allowed; transform: none;
+}
+
+/* ═══════════════════════════════════════════════
+   INPUTS
+═══════════════════════════════════════════════ */
+.input-group { margin-bottom: 14px; }
+.input-label {
+  display: block;
+  font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.input-field {
+  width: 100%; padding: 12px 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text);
+  font-family: var(--font-body); font-size: 15px;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.input-field:focus {
+  outline: none; border-color: var(--blue-glow);
+  background: rgba(45,138,255,0.05);
+}
+.input-field::placeholder { color: var(--text-dim); }
+select.input-field { cursor: pointer; }
+select.input-field option { background: var(--navy-2); }
+
+/* ═══════════════════════════════════════════════
+   BADGE / CHIPS
+═══════════════════════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+}
+.badge-green  { background: rgba(0,201,122,0.15); color: var(--green); border: 1px solid rgba(0,201,122,0.3); }
+.badge-red    { background: rgba(232,57,74,0.15);  color: var(--red);   border: 1px solid rgba(232,57,74,0.3); }
+.badge-amber  { background: rgba(245,166,35,0.15); color: var(--amber); border: 1px solid rgba(245,166,35,0.3); }
+.badge-blue   { background: rgba(45,138,255,0.15); color: var(--blue-glow); border: 1px solid rgba(45,138,255,0.3); }
+.badge-cyan   { background: rgba(0,212,255,0.12); color: var(--cyan); border: 1px solid rgba(0,212,255,0.25); }
+
+/* ═══════════════════════════════════════════════
+   STATUS BAR OFFLINE
+═══════════════════════════════════════════════ */
+#offline-bar {
+  display: none; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px 16px;
+  background: rgba(245,166,35,0.12);
+  border-bottom: 1px solid rgba(245,166,35,0.25);
+  font-size: 12px; font-weight: 600; color: var(--amber);
+  letter-spacing: 0.5px;
+}
+#offline-bar.visible { display: flex; }
+#offline-bar .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber); animation: pulse 1.5s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ═══════════════════════════════════════════════
+   VISTA LOGIN
+═══════════════════════════════════════════════ */
+#vista-login {
+  justify-content: center; align-items: center;
+  padding: 40px 24px;
+  min-height: 100%;
+}
+.login-logo-wrap {
+  text-align: center; margin-bottom: 40px;
+}
+.login-logo {
+  font-family: var(--font-head);
+  font-size: 52px; font-weight: 800; letter-spacing: 6px;
+  color: var(--text); line-height: 1;
+}
+.login-logo .accent { color: var(--cyan); }
+.login-tagline {
+  font-size: 12px; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--text-dim);
+  margin-top: 6px;
+}
+.login-box {
+  width: 100%; max-width: 360px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px 24px;
+  backdrop-filter: blur(12px);
+}
+.login-box h2 {
+  font-family: var(--font-head);
+  font-size: 20px; font-weight: 700; letter-spacing: 1px;
+  margin-bottom: 22px; color: var(--text);
+}
+.login-error {
+  background: rgba(232,57,74,0.1);
+  border: 1px solid rgba(232,57,74,0.3);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 13px; color: var(--red);
+  margin-bottom: 14px; display: none;
+}
+
+/* ═══════════════════════════════════════════════
+   VISTA EMPLEADO — REGISTRO
+═══════════════════════════════════════════════ */
+.reloj-grande {
+  text-align: center; padding: 24px 20px 20px;
+}
+.reloj-hora {
+  font-family: var(--font-head);
+  font-size: 56px; font-weight: 800; letter-spacing: -1px;
+  color: var(--text); line-height: 1;
+}
+.reloj-fecha {
+  font-size: 14px; color: var(--text-dim);
+  letter-spacing: 1px; margin-top: 4px;
+}
+
+.tipo-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 16px;
+}
+.tipo-btn {
+  padding: 14px 10px;
+  background: var(--glass); border: 1.5px solid var(--border);
+  border-radius: var(--r); cursor: pointer;
+  text-align: center; transition: all 0.2s;
+  font-family: var(--font-head);
+}
+.tipo-btn:active { transform: scale(0.95); }
+.tipo-btn.selected {
+  border-color: var(--cyan);
+  background: rgba(0,212,255,0.08);
+}
+.tipo-btn .icon { font-size: 22px; display: block; margin-bottom: 5px; }
+.tipo-btn .label {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+  color: var(--text-dim); text-transform: uppercase;
+}
+.tipo-btn.selected .label { color: var(--cyan); }
+
+/* Selfie preview */
+.selfie-area {
+  position: relative; border-radius: var(--r); overflow: hidden;
+  border: 1px solid var(--border); margin-bottom: 12px;
+  background: var(--navy-2); aspect-ratio: 4/3;
+  display: flex; align-items: center; justify-content: center;
+}
+#selfie-video, #selfie-canvas {
+  width: 100%; height: 100%; object-fit: cover;
+  transform: scaleX(-1);
+}
+#selfie-canvas { display: none; }
+.selfie-placeholder {
+  text-align: center; color: var(--text-dim);
+  font-size: 13px; padding: 20px;
+}
+.selfie-placeholder .icon { font-size: 40px; margin-bottom: 8px; }
+
+/* GPS indicator */
+.gps-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: 8px; margin-bottom: 12px; font-size: 13px;
+}
+.gps-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.gps-dot.buscando { background: var(--amber); animation: pulse 1s infinite; }
+.gps-dot.ok       { background: var(--green); }
+.gps-dot.error    { background: var(--red); }
+
+/* Registros pendientes */
+.pendiente-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(245,166,35,0.06);
+  border: 1px solid rgba(245,166,35,0.15);
+  border-radius: 8px; margin-bottom: 8px;
+}
+.pendiente-info { font-size: 13px; }
+.pendiente-info strong { color: var(--text); display: block; font-size: 12px; }
+.pendiente-info span { color: var(--text-dim); font-size: 11px; }
+
+/* ═══════════════════════════════════════════════
+   HISTORIAL
+═══════════════════════════════════════════════ */
+.historial-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.historial-item:last-child { border-bottom: none; }
+.hist-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.hist-icon.entrada  { background: rgba(0,201,122,0.12); }
+.hist-icon.salida   { background: rgba(232,57,74,0.12); }
+.hist-info { flex: 1; }
+.hist-tipo {
+  font-family: var(--font-head); font-size: 14px;
+  font-weight: 700; letter-spacing: 0.5px; color: var(--text);
+}
+.hist-meta { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.hist-time {
+  font-family: var(--font-head); font-size: 15px;
+  font-weight: 700; color: var(--cyan); white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════
+   VISTA ADMIN
+═══════════════════════════════════════════════ */
+.tabs {
+  display: flex; gap: 4px;
+  padding: 4px;
+  background: var(--navy-2);
+  border-radius: 10px; margin-bottom: 18px;
+}
+.tab-btn {
+  flex: 1; padding: 9px 6px;
+  background: transparent; border: none;
+  border-radius: 8px; cursor: pointer;
+  font-family: var(--font-head); font-size: 13px;
+  font-weight: 700; letter-spacing: 0.5px;
+  color: var(--text-dim); text-transform: uppercase;
+  transition: all 0.2s;
+}
+.tab-btn.activo {
+  background: var(--navy-3);
+  color: var(--cyan);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.tab-panel { display: none; }
+.tab-panel.activo { display: block; }
+
+/* Tabla empleados */
+.empleado-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.empleado-row:last-child { border-bottom: none; }
+.empleado-avatar {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--navy-3), var(--blue));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-head); font-size: 16px; font-weight: 800;
+  color: var(--cyan); flex-shrink: 0;
+}
+.empleado-info { flex: 1; min-width: 0; }
+.empleado-nombre {
+  font-weight: 600; font-size: 14px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.empleado-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.empleado-acciones { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* Registro row */
+.registro-row {
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.registro-row:last-child { border-bottom: none; }
+.reg-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.reg-nombre { font-weight: 600; font-size: 14px; }
+.reg-meta { font-size: 11px; color: var(--text-dim); line-height: 1.6; }
+
+/* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
+#modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  align-items: flex-end; justify-content: center;
+  padding: 0;
+}
+#modal-overlay.visible { display: flex; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.modal {
+  background: var(--navy-2);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 480px;
+  max-height: 90vh; overflow-y: auto;
+  padding: 24px 20px 40px;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+.modal-handle {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--border); margin: 0 auto 20px;
+}
+.modal-title {
+  font-family: var(--font-head); font-size: 20px;
+  font-weight: 800; letter-spacing: 1px; margin-bottom: 20px;
+}
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+#toast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--navy-3); border: 1px solid var(--border);
+  border-radius: 24px; padding: 10px 20px;
+  font-size: 13px; font-weight: 500; color: var(--text);
+  white-space: nowrap; z-index: 200;
+  opacity: 0; transition: all 0.3s; pointer-events: none;
+  box-shadow: var(--shadow);
+}
+#toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.ok   { border-color: rgba(0,201,122,0.4); color: var(--green); }
+#toast.err  { border-color: rgba(232,57,74,0.4);  color: var(--red); }
+#toast.info { border-color: rgba(45,138,255,0.4); color: var(--blue-glow); }
+
+/* ═══════════════════════════════════════════════
+   LOADER
+═══════════════════════════════════════════════ */
+.loader {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: white; border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+
+.loading-full {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: 200px; gap: 14px; color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* ═══════════════════════════════════════════════
+   BOTTOM NAV
+═══════════════════════════════════════════════ */
+.bottom-nav {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(6,14,28,0.95);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  z-index: 50;
+}
+.bottom-nav.visible { display: flex; }
+.nav-items { display: flex; width: 100%; }
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px; padding: 6px 4px;
+  cursor: pointer; transition: all 0.2s;
+  background: none; border: none; color: var(--text-dim);
+}
+.nav-item.activo { color: var(--cyan); }
+.nav-item .nav-icon { font-size: 20px; }
+.nav-item .nav-label {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════
+   MISC
+═══════════════════════════════════════════════ */
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+.section-title {
+  font-family: var(--font-head); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim);
+  margin-bottom: 12px;
+}
+.empty-state {
+  text-align: center; padding: 40px 20px; color: var(--text-dim);
+}
+.empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+.empty-state p { font-size: 13px; }
+
+.toggle-wrap {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+}
+.toggle-wrap label { font-size: 14px; color: var(--text); }
+.toggle {
+  position: relative; width: 44px; height: 24px;
+}
+.toggle input { display: none; }
+.toggle-slider {
+  position: absolute; inset: 0; border-radius: 12px;
+  background: var(--navy-3); border: 1px solid var(--border);
+  cursor: pointer; transition: background 0.2s;
+}
+.toggle-slider::after {
+  content: ''; position: absolute;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--text-dim); top: 2px; left: 2px;
+  transition: transform 0.2s, background 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: rgba(0,201,122,0.2); border-color: var(--green); }
+.toggle input:checked + .toggle-slider::after { transform: translateX(20px); background: var(--green); }
+
+.chip-geo {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px; font-size: 12px;
+  font-weight: 600;
+}
+.chip-geo.oficina { background: rgba(0,201,122,0.12); color: var(--green); }
+.chip-geo.cliente { background: rgba(45,138,255,0.12); color: var(--blue-glow); }
+.chip-geo.buscando { background: rgba(245,166,35,0.12); color: var(--amber); }
+
+.stat-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-bottom: 16px;
+}
+.stat-box {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px;
+  text-align: center;
+}
+.stat-num {
+  font-family: var(--font-head); font-size: 32px; font-weight: 800;
+  color: var(--cyan); line-height: 1;
+}
+.stat-label { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+</style>
+</head>
+
+<body>
+<div id="bg"></div>
+<div id="app">
+
+  <!-- OFFLINE BAR -->
+  <div id="offline-bar">
+    <div class="dot"></div>
+    SIN CONEXIÓN — Los registros se guardarán localmente
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VISTA: LOGIN
+  ═══════════════════════════════════════════ -->
+  <div id="vista-login" class="vista activa">
+    <div class="login-logo-wrap">
+      <div class="login-logo">S<span class="accent">E</span>I</div>
+      <div class="login-tagline">Control de Asistencia</div>
+    </div>
+    <div class="login-box">
+      <h2>Iniciar Sesión</h2>
+      <div class="login-error" id="login-error"></div>
+      <div class="input-group">
+        <label class="input-label">Correo electrónico</label>
+        <input class="input-field" type="email" id="login-email"
+               placeholder="usuario@empresa.com" autocomplete="email"/>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Contraseña</label>
+        <input class="input-field" type="password" id="login-pass"
+               placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn btn-primary" id="btn-login" onclick="doLogin()">
+        <span id="login-btn-text">INGRESAR</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VISTA: EMPLEADO
+  ═══════════════════════════════════════════ -->
+  <div id="vista-empleado" class="vista">
+    <div class="topbar">
+      <div class="topbar-logo">SEI<span> ·</span></div>
+      <div class="topbar-user">
+        <strong id="emp-nombre-top">—</strong>
+        <span id="geo-chip" class="chip-geo buscando">📍 Localizando...</span>
+      </div>
+      <button class="btn-icon" onclick="doLogout()" title="Salir">⏻</button>
+    </div>
+
+    <!-- Navegación empleado -->
+    <div class="bottom-nav visible" id="nav-empleado">
+      <div class="nav-items">
+        <button class="nav-item activo" onclick="empTab('registro')" id="nav-registro">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Registrar</span>
+        </button>
+        <button class="nav-item" onclick="empTab('historial')" id="nav-historial">
+          <span class="nav-icon">📅</span>
+          <span class="nav-label">Historial</span>
+        </button>
+        <button class="nav-item" onclick="empTab('pendientes')" id="nav-pendientes">
+          <span class="nav-icon">⏳</span>
+          <span class="nav-label">Pendientes</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB: REGISTRO -->
+    <div id="emp-tab-registro" class="contenido">
+      <div class="reloj-grande">
+        <div class="reloj-hora" id="reloj-hora">00:00:00</div>
+        <div class="reloj-fecha" id="reloj-fecha">—</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Tipo de Registro</div>
+        <div class="tipo-grid">
+          <div class="tipo-btn" id="tipo-entrada_oficina" onclick="selTipo('entrada_oficina')">
+            <span class="icon">🏢</span>
+            <span class="label">Entrada Oficina</span>
+          </div>
+          <div class="tipo-btn" id="tipo-salida_oficina" onclick="selTipo('salida_oficina')">
+            <span class="icon">🚪</span>
+            <span class="label">Salida Oficina</span>
+          </div>
+          <div class="tipo-btn" id="tipo-entrada_cliente" onclick="selTipo('entrada_cliente')">
+            <span class="icon">🏭</span>
+            <span class="label">Entrada Cliente</span>
+          </div>
+          <div class="tipo-btn" id="tipo-salida_cliente" onclick="selTipo('salida_cliente')">
+            <span class="icon">✅</span>
+            <span class="label">Salida Cliente</span>
+          </div>
+        </div>
+
+        <!-- Cliente nombre (solo para registros de cliente) -->
+        <div id="campo-cliente" style="display:none" class="input-group">
+          <label class="input-label">Nombre de la empresa cliente</label>
+          <input class="input-field" type="text" id="nombre-cliente"
+                 placeholder="Ej: Grupo Industrial ACME"/>
+        </div>
+
+        <!-- Toggle salida final -->
+        <div id="campo-salida-final" style="display:none">
+          <div class="toggle-wrap">
+            <label>Esta es mi salida final del día</label>
+            <label class="toggle">
+              <input type="checkbox" id="chk-salida-final"/>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- GPS -->
+      <div class="gps-bar">
+        <div class="gps-dot buscando" id="gps-dot"></div>
+        <span id="gps-texto">Obteniendo ubicación...</span>
+      </div>
+
+      <!-- Cámara selfie -->
+      <div class="card">
+        <div class="card-title">Selfie de verificación</div>
+        <div class="selfie-area" id="selfie-area">
+          <video id="selfie-video" autoplay playsinline muted></video>
+          <canvas id="selfie-canvas"></canvas>
+          <div class="selfie-placeholder" id="selfie-placeholder">
+            <div class="icon">📷</div>
+            <p>La cámara se activará al registrar</p>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost btn-sm" id="btn-cam" onclick="iniciarCamara()" style="flex:1">
+            📷 Activar cámara
+          </button>
+          <button class="btn btn-cyan btn-sm" id="btn-foto" onclick="tomarFoto()" style="flex:1; display:none">
+            📸 Tomar foto
+          </button>
+          <button class="btn btn-ghost btn-sm" id="btn-repetir" onclick="repetirFoto()" style="flex:1; display:none">
+            🔄 Repetir
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-registrar" onclick="doRegistrar()" disabled>
+        <span id="reg-btn-text">SELECCIONA UN TIPO</span>
+      </button>
+    </div>
+
+    <!-- TAB: HISTORIAL -->
+    <div id="emp-tab-historial" class="contenido" style="display:none">
+      <div class="section-title">Mis Registros Recientes</div>
+      <div class="card" id="historial-lista">
+        <div class="loading-full"><div class="loader"></div><span>Cargando...</span></div>
+      </div>
+    </div>
+
+    <!-- TAB: PENDIENTES -->
+    <div id="emp-tab-pendientes" class="contenido" style="display:none">
+      <div class="section-title">Registros Offline Pendientes</div>
+      <div id="pendientes-lista"></div>
+      <button class="btn btn-amber" id="btn-sync" onclick="syncOffline()" style="display:none">
+        🔄 SINCRONIZAR AHORA
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       VISTA: ADMIN
+  ═══════════════════════════════════════════ -->
+  <div id="vista-admin" class="vista">
+    <div class="topbar">
+      <div class="topbar-logo">SEI<span> · ADMIN</span></div>
+      <div class="topbar-user">
+        <strong id="adm-nombre-top">—</strong>
+        <span style="font-size:11px;color:var(--cyan)">Administrador</span>
+      </div>
+      <button class="btn-icon" onclick="doLogout()" title="Salir">⏻</button>
+    </div>
+
+    <div class="bottom-nav visible" id="nav-admin">
+      <div class="nav-items">
+        <button class="nav-item activo" onclick="admTab('empleados')" id="nav-adm-empleados">
+          <span class="nav-icon">👥</span>
+          <span class="nav-label">Empleados</span>
+        </button>
+        <button class="nav-item" onclick="admTab('registros')" id="nav-adm-registros">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Registros</span>
+        </button>
+        <button class="nav-item" onclick="admTab('reporte')" id="nav-adm-reporte">
+          <span class="nav-icon">📥</span>
+          <span class="nav-label">Exportar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB: EMPLEADOS -->
+    <div id="adm-tab-empleados" class="contenido">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <div class="section-title" style="margin:0">Empleados Registrados</div>
+        <button class="btn btn-cyan btn-sm" onclick="abrirModalNuevoEmpleado()">+ Nuevo</button>
+      </div>
+      <div class="card" id="adm-empleados-lista">
+        <div class="loading-full"><div class="loader"></div><span>Cargando...</span></div>
+      </div>
+    </div>
+
+    <!-- TAB: REGISTROS -->
+    <div id="adm-tab-registros" class="contenido" style="display:none">
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">Filtros</div>
+        <div class="input-group">
+          <label class="input-label">Empleado</label>
+          <select class="input-field" id="filtro-empleado">
+            <option value="">Todos los empleados</option>
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="input-group" style="margin:0">
+            <label class="input-label">Desde</label>
+            <input class="input-field" type="date" id="filtro-desde"/>
+          </div>
+          <div class="input-group" style="margin:0">
+            <label class="input-label">Hasta</label>
+            <input class="input-field" type="date" id="filtro-hasta"/>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="btn btn-primary" onclick="cargarRegistros()">🔍 BUSCAR</button>
+        </div>
+      </div>
+      <div class="card" id="adm-registros-lista">
+        <div class="empty-state">
+          <div class="icon">🔍</div>
+          <p>Usa los filtros para buscar registros</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: REPORTE -->
+    <div id="adm-tab-reporte" class="contenido" style="display:none">
+      <div class="card">
+        <div class="card-title">Exportar Reporte Excel</div>
+        <div class="input-group">
+          <label class="input-label">Empleado</label>
+          <select class="input-field" id="rep-empleado">
+            <option value="">Todos los empleados</option>
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+          <div class="input-group" style="margin:0">
+            <label class="input-label">Desde</label>
+            <input class="input-field" type="date" id="rep-desde"/>
+          </div>
+          <div class="input-group" style="margin:0">
+            <label class="input-label">Hasta</label>
+            <input class="input-field" type="date" id="rep-hasta"/>
+          </div>
+        </div>
+        <button class="btn btn-green" onclick="exportarExcel()">
+          📥 DESCARGAR EXCEL
+        </button>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title">Estadísticas Rápidas</div>
+        <div class="stat-grid" id="stats-grid">
+          <div class="stat-box">
+            <div class="stat-num" id="stat-total">—</div>
+            <div class="stat-label">Registros Hoy</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-activos">—</div>
+            <div class="stat-label">Empleados Activos</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-pendientes">—</div>
+            <div class="stat-label">Por Sincronizar</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="stat-revisar">—</div>
+            <div class="stat-label">Para Revisar</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="cargarStats()" style="margin-top:4px;">
+          🔄 Actualizar estadísticas
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<!-- ═══════════════════════════════════════════
+     MODAL EMPLEADO (ALTA / EDITAR)
+═══════════════════════════════════════════ -->
+<div id="modal-overlay" onclick="cerrarModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-titulo">Nuevo Empleado</div>
+    <input type="hidden" id="modal-emp-id"/>
+
+    <div class="input-group">
+      <label class="input-label">Nombre</label>
+      <input class="input-field" type="text" id="modal-nombre" placeholder="Juan"/>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Apellido</label>
+      <input class="input-field" type="text" id="modal-apellido" placeholder="Pérez"/>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Correo electrónico</label>
+      <input class="input-field" type="email" id="modal-email" placeholder="juan@empresa.com"/>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Contraseña <span style="color:var(--text-dim);font-size:10px;text-transform:none">(dejar vacío = no cambiar)</span></label>
+      <input class="input-field" type="password" id="modal-pass" placeholder="••••••••"/>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Rol</label>
+      <select class="input-field" id="modal-rol">
+        <option value="empleado">Empleado</option>
+        <option value="admin">Administrador</option>
+      </select>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:6px;">
+      <button class="btn btn-ghost" onclick="cerrarModal()" style="flex:1">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEmpleado()" style="flex:2">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONFIGURACIÓN — ⚠️ CAMBIA ESTA URL POR LA DE TU DEPLOYMENT
+// ═══════════════════════════════════════════════════════════
+const API_URL = 'https://script.google.com/macros/s/AKfycbyhED-hqrZ-GpFDbZnaSLDUnMn5UtkKuPkjmrWG2XexMIPQL1pUJiPRKENbecPhwTs90w/exec';
+
+// Coordenadas de la oficina (también en Config de Sheets,
+// pero se pueden poner aquí como fallback)
+const OFICINA_LAT = 19.256104;
+const OFICINA_LNG = -98.362118;
+const RADIO_OFICINA = 100; // metros
+
+// ═══════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════
+let sesion = null;           // { token, empleado_id, nombre, apellido, rol }
+let gpsCoords = null;        // { lat, lng, accuracy }
+let selfieBase64 = null;     // imagen tomada
+let tipoSeleccionado = null; // tipo de registro
+let camaraStream = null;     // MediaStream
+let enOficina = null;        // null=buscando, true/false
+let esOnline = navigator.onLine;
+
+// ═══════════════════════════════════════════════════════════
+// INDEXEDDB — REGISTROS OFFLINE
+// ═══════════════════════════════════════════════════════════
+let db;
+function abrirDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('sei_offline', 1);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore('pendientes', { keyPath: 'id' });
+    };
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror   = () => rej(req.error);
+  });
+}
+
+async function guardarOffline(registro) {
+  await abrirDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('pendientes', 'readwrite');
+    tx.objectStore('pendientes').add(registro);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+}
+
+async function getPendientes() {
+  await abrirDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('pendientes', 'readonly');
+    const req = tx.objectStore('pendientes').getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+
+async function eliminarPendiente(id) {
+  await abrirDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('pendientes', 'readwrite');
+    tx.objectStore('pendientes').delete(id);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════════════════════════
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+async function sha256(texto) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function toast(msg, tipo = 'ok', dur = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `visible ${tipo}`;
+  setTimeout(() => el.className = '', dur);
+}
+
+function mostrarVista(id) {
+  document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
+  document.getElementById(id).classList.add('activa');
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatFecha(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' })
+       + ' ' + d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+}
+
+// ═══════════════════════════════════════════════════════════
+// RELOJ
+// ═══════════════════════════════════════════════════════════
+function tickReloj() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  const el = document.getElementById('reloj-hora');
+  if (el) el.textContent = `${h}:${m}:${s}`;
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const ef = document.getElementById('reloj-fecha');
+  if (ef) ef.textContent = `${dias[now.getDay()]}, ${now.getDate()} ${meses[now.getMonth()]} ${now.getFullYear()}`;
+}
+setInterval(tickReloj, 1000);
+tickReloj();
+
+// ═══════════════════════════════════════════════════════════
+// CONEXIÓN OFFLINE/ONLINE
+// ═══════════════════════════════════════════════════════════
+function actualizarConexion() {
+  esOnline = navigator.onLine;
+  const bar = document.getElementById('offline-bar');
+  if (!esOnline) {
+    bar.classList.add('visible');
+  } else {
+    bar.classList.remove('visible');
+    syncOffline(); // Auto-sync al recuperar conexión
+  }
+}
+window.addEventListener('online',  actualizarConexion);
+window.addEventListener('offline', actualizarConexion);
+actualizarConexion();
+
+// ═══════════════════════════════════════════════════════════
+// SESIÓN LOCAL
+// ═══════════════════════════════════════════════════════════
+function guardarSesion(data) {
+  sesion = data;
+  localStorage.setItem('sei_sesion', JSON.stringify(data));
+}
+function cargarSesionLocal() {
+  const s = localStorage.getItem('sei_sesion');
+  if (s) { sesion = JSON.parse(s); return true; }
+  return false;
+}
+function limpiarSesion() {
+  sesion = null;
+  localStorage.removeItem('sei_sesion');
+}
+
+// ═══════════════════════════════════════════════════════════
+// API CALLS
+// ═══════════════════════════════════════════════════════════
+async function apiPost(action, data) {
+  const resp = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...data })
+  });
+  return resp.json();
+}
+
+async function apiGet(params) {
+  const qs = new URLSearchParams(params).toString();
+  const resp = await fetch(`${API_URL}?${qs}`);
+  return resp.json();
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOGIN / LOGOUT
+// ═══════════════════════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('btn-login');
+  const txt   = document.getElementById('login-btn-text');
+
+  if (!email || !pass) {
+    errEl.textContent = 'Ingresa tu correo y contraseña.';
+    errEl.style.display = 'block'; return;
+  }
+
+  errEl.style.display = 'none';
+  txt.innerHTML = '<div class="loader"></div>';
+  btn.disabled = true;
+
+  try {
+    const hash = await sha256(pass);
+    const res = await apiPost('login', { email, password_hash: hash });
+
+    if (res.ok) {
+      guardarSesion(res);
+      entrarApp(res);
+    } else {
+      errEl.textContent = res.error || 'Error al iniciar sesión.';
+      errEl.style.display = 'block';
+    }
+  } catch (err) {
+    errEl.textContent = 'Sin conexión. Verifica tu internet.';
+    errEl.style.display = 'block';
+  } finally {
+    txt.textContent = 'INGRESAR';
+    btn.disabled = false;
+  }
+}
+
+function entrarApp(data) {
+  if (data.rol === 'admin') {
+    document.getElementById('adm-nombre-top').textContent = `${data.nombre} ${data.apellido}`;
+    mostrarVista('vista-admin');
+    cargarEmpleados();
+  } else {
+    document.getElementById('emp-nombre-top').textContent = `${data.nombre} ${data.apellido}`;
+    mostrarVista('vista-empleado');
+    iniciarGPS();
+    renderPendientes();
+  }
+}
+
+async function doLogout() {
+  if (sesion?.token && esOnline) {
+    apiPost('logout', { token: sesion.token }).catch(() => {});
+  }
+  detenerCamara();
+  limpiarSesion();
+  mostrarVista('vista-login');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+// GPS + GEOFENCING
+// ═══════════════════════════════════════════════════════════
+function iniciarGPS() {
+  const dot  = document.getElementById('gps-dot');
+  const txt  = document.getElementById('gps-texto');
+  const chip = document.getElementById('geo-chip');
+
+  dot.className = 'gps-dot buscando';
+  txt.textContent = 'Obteniendo ubicación...';
+  chip.className = 'chip-geo buscando';
+  chip.textContent = '📍 Localizando...';
+
+  if (!navigator.geolocation) {
+    dot.className = 'gps-dot error';
+    txt.textContent = 'GPS no disponible';
+    return;
+  }
+
+  navigator.geolocation.watchPosition(
+    pos => {
+      gpsCoords = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy
+      };
+
+      const dist = haversine(gpsCoords.lat, gpsCoords.lng, OFICINA_LAT, OFICINA_LNG);
+      enOficina = dist <= RADIO_OFICINA;
+
+      dot.className = 'gps-dot ok';
+      txt.textContent = `±${Math.round(gpsCoords.accuracy)}m · ${dist < 1000 ? Math.round(dist)+'m' : (dist/1000).toFixed(1)+'km'} de oficina`;
+
+      if (enOficina) {
+        chip.className = 'chip-geo oficina';
+        chip.textContent = '🏢 En Oficina';
+        // Auto-sugerir tipo según si hay registro abierto
+        if (!tipoSeleccionado) selTipo('entrada_oficina');
+      } else {
+        chip.className = 'chip-geo cliente';
+        chip.textContent = '📍 Fuera de Oficina';
+        if (!tipoSeleccionado) selTipo('entrada_cliente');
+      }
+      actualizarBtnRegistrar();
+    },
+    err => {
+      dot.className = 'gps-dot error';
+      txt.textContent = 'Error GPS: ' + err.message;
+      chip.className = 'chip-geo buscando';
+      chip.textContent = '❌ Sin GPS';
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// CÁMARA SELFIE
+// ═══════════════════════════════════════════════════════════
+async function iniciarCamara() {
+  const video  = document.getElementById('selfie-video');
+  const ph     = document.getElementById('selfie-placeholder');
+  const btnCam = document.getElementById('btn-cam');
+  const btnFot = document.getElementById('btn-foto');
+
+  try {
+    detenerCamara();
+    camaraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false
+    });
+    video.srcObject = camaraStream;
+    video.style.display = 'block';
+    ph.style.display = 'none';
+    btnCam.style.display = 'none';
+    btnFot.style.display = 'flex';
+    selfieBase64 = null;
+    document.getElementById('selfie-canvas').style.display = 'none';
+    actualizarBtnRegistrar();
+  } catch (err) {
+    toast('No se pudo acceder a la cámara: ' + err.message, 'err');
+  }
+}
+
+function tomarFoto() {
+  const video  = document.getElementById('selfie-video');
+  const canvas = document.getElementById('selfie-canvas');
+  const ctx    = canvas.getContext('2d');
+  const btnFot = document.getElementById('btn-foto');
+  const btnRep = document.getElementById('btn-repetir');
+
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+
+  // Efecto espejo consistente
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  selfieBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+  video.style.display  = 'none';
+  canvas.style.display = 'block';
+  btnFot.style.display = 'none';
+  btnRep.style.display = 'flex';
+
+  detenerCamara();
+  actualizarBtnRegistrar();
+  toast('✅ Foto tomada', 'ok', 2000);
+}
+
+function repetirFoto() {
+  selfieBase64 = null;
+  document.getElementById('selfie-canvas').style.display = 'none';
+  document.getElementById('btn-repetir').style.display = 'none';
+  document.getElementById('btn-cam').style.display = 'flex';
+  iniciarCamara();
+}
+
+function detenerCamara() {
+  if (camaraStream) {
+    camaraStream.getTracks().forEach(t => t.stop());
+    camaraStream = null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SELECCIÓN TIPO DE REGISTRO
+// ═══════════════════════════════════════════════════════════
+function selTipo(tipo) {
+  tipoSeleccionado = tipo;
+  document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById(`tipo-${tipo}`)?.classList.add('selected');
+
+  const esCliente = tipo.includes('cliente');
+  document.getElementById('campo-cliente').style.display     = esCliente ? 'block' : 'none';
+  document.getElementById('campo-salida-final').style.display = tipo === 'salida_cliente' ? 'block' : 'none';
+
+  actualizarBtnRegistrar();
+}
+
+function actualizarBtnRegistrar() {
+  const btn = document.getElementById('btn-registrar');
+  const txt = document.getElementById('reg-btn-text');
+  const listo = tipoSeleccionado && gpsCoords && selfieBase64;
+
+  if (!tipoSeleccionado) { txt.textContent = 'SELECCIONA UN TIPO'; btn.disabled = true; return; }
+  if (!gpsCoords)        { txt.textContent = 'ESPERANDO GPS...';   btn.disabled = true; return; }
+  if (!selfieBase64)     { txt.textContent = 'TOMA LA SELFIE';     btn.disabled = true; return; }
+
+  txt.textContent = 'REGISTRAR ASISTENCIA';
+  btn.disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════════
+// REGISTRAR ASISTENCIA
+// ═══════════════════════════════════════════════════════════
+async function doRegistrar() {
+  if (!tipoSeleccionado || !gpsCoords || !selfieBase64) return;
+
+  const esCliente  = tipoSeleccionado.includes('cliente');
+  const cliente    = document.getElementById('nombre-cliente').value.trim();
+  const salidaFinal = document.getElementById('chk-salida-final').checked;
+
+  if (esCliente && !cliente) {
+    toast('Ingresa el nombre de la empresa cliente', 'err');
+    return;
+  }
+
+  const btn = document.getElementById('btn-registrar');
+  const txt = document.getElementById('reg-btn-text');
+  txt.innerHTML = '<div class="loader"></div>';
+  btn.disabled = true;
+
+  const registro = {
+    id: uuid(),
+    empleado_id:        sesion.empleado_id,
+    tipo_evento:        tipoSeleccionado,
+    timestamp_registro: new Date().toISOString(),
+    lat:                gpsCoords.lat,
+    lng:                gpsCoords.lng,
+    precision_gps:      gpsCoords.accuracy,
+    selfie_base64:      selfieBase64,
+    empresa_cliente:    cliente,
+    es_salida_final:    salidaFinal,
+    dispositivo:        navigator.userAgent.slice(0, 120)
+  };
+
+  if (esOnline) {
+    try {
+      const res = await apiPost('registrar', { token: sesion.token, ...registro });
+      if (res.ok) {
+        toast('✅ Registro guardado correctamente', 'ok');
+        resetRegistro();
+      } else {
+        toast(res.error || 'Error al registrar', 'err');
+      }
+    } catch {
+      // Sin conexión al momento de enviar
+      await guardarOffline(registro);
+      toast('⚠️ Sin conexión — guardado localmente', 'info');
+      resetRegistro();
+    }
+  } else {
+    await guardarOffline(registro);
+    toast('⚠️ Sin conexión — guardado localmente', 'info');
+    resetRegistro();
+  }
+
+  actualizarBtnRegistrar();
+}
+
+function resetRegistro() {
+  tipoSeleccionado = null;
+  selfieBase64     = null;
+  document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('campo-cliente').style.display = 'none';
+  document.getElementById('campo-salida-final').style.display = 'none';
+  document.getElementById('nombre-cliente').value = '';
+  document.getElementById('chk-salida-final').checked = false;
+  document.getElementById('selfie-canvas').style.display = 'none';
+  document.getElementById('selfie-video').style.display = 'block';
+  document.getElementById('btn-cam').style.display = 'flex';
+  document.getElementById('btn-foto').style.display = 'none';
+  document.getElementById('btn-repetir').style.display = 'none';
+  document.getElementById('selfie-placeholder').style.display = 'flex';
+  detenerCamara();
+  renderPendientes();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SYNC OFFLINE
+// ═══════════════════════════════════════════════════════════
+async function syncOffline() {
+  if (!esOnline || !sesion) return;
+  const pendientes = await getPendientes();
+  if (pendientes.length === 0) return;
+
+  toast(`🔄 Sincronizando ${pendientes.length} registro(s)...`, 'info', 4000);
+
+  try {
+    const res = await apiPost('sync_offline', {
+      token: sesion.token,
+      registros: pendientes
+    });
+
+    if (res.ok) {
+      for (const r of res.resultados) {
+        if (r.ok) await eliminarPendiente(r.id);
+      }
+      const ok = res.resultados.filter(r => r.ok).length;
+      toast(`✅ ${ok} registro(s) sincronizados`, 'ok');
+      renderPendientes();
+    }
+  } catch {
+    toast('Error al sincronizar', 'err');
+  }
+}
+
+async function renderPendientes() {
+  const lista = document.getElementById('pendientes-lista');
+  const btnSync = document.getElementById('btn-sync');
+  if (!lista) return;
+
+  const pendientes = await getPendientes();
+
+  if (pendientes.length === 0) {
+    lista.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">✅</div>
+        <p>No hay registros pendientes</p>
+      </div>`;
+    btnSync.style.display = 'none';
+    return;
+  }
+
+  btnSync.style.display = 'flex';
+  const TIPOS = {
+    entrada_oficina:  '🏢 Entrada Oficina',
+    salida_oficina:   '🚪 Salida Oficina',
+    entrada_cliente:  '🏭 Entrada Cliente',
+    salida_cliente:   '✅ Salida Cliente'
+  };
+
+  lista.innerHTML = pendientes.map(p => `
+    <div class="pendiente-item">
+      <div class="pendiente-info">
+        <strong>${TIPOS[p.tipo_evento] || p.tipo_evento}</strong>
+        <span>${formatFecha(p.timestamp_registro)}${p.empresa_cliente ? ' · ' + p.empresa_cliente : ''}</span>
+      </div>
+      <span class="badge badge-amber">Pendiente</span>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// HISTORIAL EMPLEADO
+// ═══════════════════════════════════════════════════════════
+async function cargarHistorial() {
+  const lista = document.getElementById('historial-lista');
+  lista.innerHTML = '<div class="loading-full"><div class="loader"></div><span>Cargando...</span></div>';
+
+  try {
+    const desde = new Date();
+    desde.setDate(desde.getDate() - 30);
+    const res = await apiGet({
+      action:    'get_historial',
+      token:     sesion.token,
+      desde:     desde.toISOString()
+    });
+
+    if (!res.ok) { lista.innerHTML = `<p style="color:var(--red)">${res.error}</p>`; return; }
+
+    const registros = res.registros.reverse();
+
+    if (registros.length === 0) {
+      lista.innerHTML = `<div class="empty-state"><div class="icon">📅</div><p>Sin registros en los últimos 30 días</p></div>`;
+      return;
+    }
+
+    const TIPOS = {
+      entrada_oficina:  { label: 'Entrada Oficina',  icon: '🏢', cls: 'entrada' },
+      salida_oficina:   { label: 'Salida Oficina',   icon: '🚪', cls: 'salida'  },
+      entrada_cliente:  { label: 'Entrada Cliente',  icon: '🏭', cls: 'entrada' },
+      salida_cliente:   { label: 'Salida Cliente',   icon: '✅', cls: 'salida'  }
+    };
+
+    lista.innerHTML = registros.map(r => {
+      const t = TIPOS[r.tipo_evento] || { label: r.tipo_evento, icon: '📋', cls: 'entrada' };
+      const d = new Date(r.timestamp_registro);
+      const hora = d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+      const fecha = d.toLocaleDateString('es-MX', { day:'2-digit', month:'short' });
+      const offline = r.origen === 'offline' ? ' <span class="badge badge-amber" style="font-size:9px">OFFLINE</span>' : '';
+      const revisar = r.estado_sync === 'revisar' ? ' <span class="badge badge-red" style="font-size:9px">REVISAR</span>' : '';
+      return `
+        <div class="historial-item">
+          <div class="hist-icon ${t.cls}">${t.icon}</div>
+          <div class="hist-info">
+            <div class="hist-tipo">${t.label}${offline}${revisar}</div>
+            <div class="hist-meta">${fecha}${r.empresa_cliente ? ' · ' + r.empresa_cliente : ''}</div>
+          </div>
+          <div class="hist-time">${hora}</div>
+        </div>`;
+    }).join('');
+  } catch {
+    lista.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Error al cargar historial</p></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TABS EMPLEADO
+// ═══════════════════════════════════════════════════════════
+function empTab(tab) {
+  ['registro','historial','pendientes'].forEach(t => {
+    document.getElementById(`emp-tab-${t}`).style.display = t === tab ? 'block' : 'none';
+    const nav = document.getElementById(`nav-${t}`);
+    if (nav) nav.className = t === tab ? 'nav-item activo' : 'nav-item';
+  });
+  if (tab === 'historial') cargarHistorial();
+  if (tab === 'pendientes') renderPendientes();
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN — EMPLEADOS
+// ═══════════════════════════════════════════════════════════
+let listaEmpleados = [];
+
+async function cargarEmpleados() {
+  const lista = document.getElementById('adm-empleados-lista');
+  lista.innerHTML = '<div class="loading-full"><div class="loader"></div><span>Cargando...</span></div>';
+
+  try {
+    const res = await apiGet({ action: 'get_empleados', token: sesion.token });
+    if (!res.ok) { lista.innerHTML = `<p style="color:var(--red)">${res.error}</p>`; return; }
+    listaEmpleados = res.empleados;
+    renderEmpleados(listaEmpleados);
+    poblarSelectEmpleados(listaEmpleados);
+  } catch {
+    lista.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Error al cargar empleados</p></div>`;
+  }
+}
+
+function renderEmpleados(empleados) {
+  const lista = document.getElementById('adm-empleados-lista');
+  if (!empleados.length) {
+    lista.innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No hay empleados registrados</p></div>`;
+    return;
+  }
+
+  lista.innerHTML = empleados.map(e => {
+    const iniciales = (e.nombre[0] + (e.apellido[0] || '')).toUpperCase();
+    const activo = e.activo === true || e.activo === 'TRUE' || e.activo === 1;
+    return `
+      <div class="empleado-row">
+        <div class="empleado-avatar">${iniciales}</div>
+        <div class="empleado-info">
+          <div class="empleado-nombre">${e.nombre} ${e.apellido}</div>
+          <div class="empleado-sub">
+            ${e.email} ·
+            <span class="badge ${e.rol === 'admin' ? 'badge-cyan' : 'badge-blue'}" style="font-size:9px;padding:2px 6px">${e.rol}</span>
+            <span class="badge ${activo ? 'badge-green' : 'badge-red'}" style="font-size:9px;padding:2px 6px;margin-left:2px">${activo ? 'Activo' : 'Baja'}</span>
+          </div>
+        </div>
+        <div class="empleado-acciones">
+          <button class="btn-icon" onclick="abrirModalEditar('${e.id}')" title="Editar" style="font-size:13px">✏️</button>
+          <button class="btn-icon" onclick="toggleBaja('${e.id}', ${activo})" title="${activo ? 'Dar de baja' : 'Reactivar'}" style="font-size:13px">${activo ? '🚫' : '✅'}</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function poblarSelectEmpleados(empleados) {
+  ['filtro-empleado','rep-empleado'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Todos los empleados</option>';
+    empleados.forEach(e => {
+      const op = document.createElement('option');
+      op.value = e.id; op.textContent = `${e.nombre} ${e.apellido}`;
+      sel.appendChild(op);
+    });
+  });
+}
+
+function abrirModalNuevoEmpleado() {
+  document.getElementById('modal-titulo').textContent = 'Nuevo Empleado';
+  document.getElementById('modal-emp-id').value = '';
+  document.getElementById('modal-nombre').value = '';
+  document.getElementById('modal-apellido').value = '';
+  document.getElementById('modal-email').value = '';
+  document.getElementById('modal-pass').value = '';
+  document.getElementById('modal-rol').value = 'empleado';
+  document.getElementById('modal-overlay').classList.add('visible');
+}
+
+function abrirModalEditar(id) {
+  const emp = listaEmpleados.find(e => e.id === id);
+  if (!emp) return;
+  document.getElementById('modal-titulo').textContent = 'Editar Empleado';
+  document.getElementById('modal-emp-id').value = emp.id;
+  document.getElementById('modal-nombre').value = emp.nombre;
+  document.getElementById('modal-apellido').value = emp.apellido;
+  document.getElementById('modal-email').value = emp.email;
+  document.getElementById('modal-pass').value = '';
+  document.getElementById('modal-rol').value = emp.rol;
+  document.getElementById('modal-overlay').classList.add('visible');
+}
+
+function cerrarModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('visible');
+  }
+}
+
+async function guardarEmpleado() {
+  const id       = document.getElementById('modal-emp-id').value;
+  const nombre   = document.getElementById('modal-nombre').value.trim();
+  const apellido = document.getElementById('modal-apellido').value.trim();
+  const email    = document.getElementById('modal-email').value.trim();
+  const pass     = document.getElementById('modal-pass').value;
+  const rol      = document.getElementById('modal-rol').value;
+
+  if (!nombre || !apellido || !email) {
+    toast('Nombre, apellido y email son requeridos', 'err'); return;
+  }
+
+  let password_hash = undefined;
+  if (pass) password_hash = await sha256(pass);
+
+  try {
+    let res;
+    if (!id) {
+      // Alta
+      if (!pass) { toast('La contraseña es requerida para nuevos empleados', 'err'); return; }
+      res = await apiPost('alta_empleado', {
+        token: sesion.token, nombre, apellido, email, password_hash, rol
+      });
+    } else {
+      // Editar
+      res = await apiPost('editar_empleado', {
+        token: sesion.token, empleado_id: id, nombre, apellido, email, rol,
+        ...(password_hash && { password_hash })
+      });
+    }
+
+    if (res.ok) {
+      toast('✅ Empleado guardado', 'ok');
+      cerrarModal();
+      cargarEmpleados();
+    } else {
+      toast(res.error || 'Error al guardar', 'err');
+    }
+  } catch {
+    toast('Error de conexión', 'err');
+  }
+}
+
+async function toggleBaja(id, estaActivo) {
+  const accion = estaActivo ? 'dar de baja' : 'reactivar';
+  if (!confirm(`¿Confirmas ${accion} a este empleado?`)) return;
+
+  try {
+    let res;
+    if (estaActivo) {
+      res = await apiPost('baja_empleado', { token: sesion.token, empleado_id: id });
+    } else {
+      res = await apiPost('editar_empleado', { token: sesion.token, empleado_id: id, activo: true });
+    }
+    if (res.ok) {
+      toast(`✅ Empleado ${estaActivo ? 'dado de baja' : 'reactivado'}`, 'ok');
+      cargarEmpleados();
+    } else {
+      toast(res.error || 'Error', 'err');
+    }
+  } catch {
+    toast('Error de conexión', 'err');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN — REGISTROS
+// ═══════════════════════════════════════════════════════════
+async function cargarRegistros() {
+  const lista   = document.getElementById('adm-registros-lista');
+  const empId   = document.getElementById('filtro-empleado').value;
+  const desde   = document.getElementById('filtro-desde').value;
+  const hasta   = document.getElementById('filtro-hasta').value;
+
+  lista.innerHTML = '<div class="loading-full"><div class="loader"></div><span>Buscando...</span></div>';
+
+  try {
+    const params = { action: 'get_registros', token: sesion.token };
+    if (empId) params.empleado_id = empId;
+    if (desde) params.desde = new Date(desde).toISOString();
+    if (hasta) {
+      const h = new Date(hasta); h.setHours(23,59,59);
+      params.hasta = h.toISOString();
+    }
+
+    const res = await apiGet(params);
+    if (!res.ok) { lista.innerHTML = `<p style="color:var(--red)">${res.error}</p>`; return; }
+
+    const registros = res.registros.reverse();
+
+    if (!registros.length) {
+      lista.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Sin registros con esos filtros</p></div>`;
+      return;
+    }
+
+    const TIPOS = {
+      entrada_oficina:  '🏢 Entrada Oficina',
+      salida_oficina:   '🚪 Salida Oficina',
+      entrada_cliente:  '🏭 Entrada Cliente',
+      salida_cliente:   '✅ Salida Cliente'
+    };
+
+    lista.innerHTML = registros.map(r => {
+      const revisar = r.estado_sync === 'revisar';
+      const offline = r.origen === 'offline';
+      return `
+        <div class="registro-row">
+          <div class="reg-header">
+            <span class="reg-nombre">${r.nombre_empleado}</span>
+            <span class="badge ${revisar ? 'badge-red' : offline ? 'badge-amber' : 'badge-green'}">
+              ${revisar ? '⚠️ Revisar' : offline ? '📵 Offline' : '✅ OK'}
+            </span>
+          </div>
+          <div class="reg-meta">
+            ${TIPOS[r.tipo_evento] || r.tipo_evento} ·
+            ${formatFecha(r.timestamp_registro)}
+            ${r.empresa_cliente ? ' · ' + r.empresa_cliente : ''}
+            ${r.es_salida_final ? ' · <strong style="color:var(--amber)">Salida Final</strong>' : ''}
+            <br>📍 ${r.lat?.toFixed(5) || '—'}, ${r.lng?.toFixed(5) || '—'}
+            ${r.selfie_url ? ` · <a href="${r.selfie_url}" target="_blank" style="color:var(--cyan);text-decoration:none">📷 Ver selfie</a>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  } catch {
+    lista.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Error al cargar registros</p></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN — EXPORTAR EXCEL
+// ═══════════════════════════════════════════════════════════
+async function exportarExcel() {
+  const empId = document.getElementById('rep-empleado').value;
+  const desde = document.getElementById('rep-desde').value;
+  const hasta = document.getElementById('rep-hasta').value;
+
+  toast('⏳ Generando reporte...', 'info', 10000);
+
+  try {
+    const params = { action: 'reporte_excel', token: sesion.token };
+    if (empId) params.empleado_id = empId;
+    if (desde) params.desde = new Date(desde).toISOString();
+    if (hasta) {
+      const h = new Date(hasta); h.setHours(23,59,59);
+      params.hasta = h.toISOString();
+    }
+
+    const res = await apiGet(params);
+    if (res.ok && res.url_reporte) {
+      window.open(res.url_reporte, '_blank');
+      toast('✅ Reporte listo — revisa las descargas', 'ok');
+    } else {
+      toast(res.error || 'Error al generar reporte', 'err');
+    }
+  } catch {
+    toast('Error de conexión', 'err');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN — STATS
+// ═══════════════════════════════════════════════════════════
+async function cargarStats() {
+  try {
+    const hoy  = new Date(); hoy.setHours(0,0,0,0);
+    const manana = new Date(hoy); manana.setDate(manana.getDate()+1);
+
+    const [resReg, resEmp] = await Promise.all([
+      apiGet({ action: 'get_registros', token: sesion.token, desde: hoy.toISOString(), hasta: manana.toISOString() }),
+      apiGet({ action: 'get_empleados', token: sesion.token })
+    ]);
+
+    const totalHoy    = resReg.ok ? resReg.registros.length : 0;
+    const activos     = resEmp.ok ? resEmp.empleados.filter(e => e.activo === true || e.activo === 'TRUE').length : 0;
+    const porRevisar  = resReg.ok ? resReg.registros.filter(r => r.estado_sync === 'revisar').length : 0;
+
+    const pendientes = await getPendientes();
+
+    document.getElementById('stat-total').textContent    = totalHoy;
+    document.getElementById('stat-activos').textContent  = activos;
+    document.getElementById('stat-pendientes').textContent = pendientes.length;
+    document.getElementById('stat-revisar').textContent  = porRevisar;
+  } catch {
+    toast('Error al cargar estadísticas', 'err');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TABS ADMIN
+// ═══════════════════════════════════════════════════════════
+function admTab(tab) {
+  ['empleados','registros','reporte'].forEach(t => {
+    document.getElementById(`adm-tab-${t}`).style.display = t === tab ? 'block' : 'none';
+    const nav = document.getElementById(`nav-adm-${t}`);
+    if (nav) nav.className = t === tab ? 'nav-item activo' : 'nav-item';
+  });
+  if (tab === 'reporte') cargarStats();
+  if (tab === 'registros' && listaEmpleados.length > 0) poblarSelectEmpleados(listaEmpleados);
+}
+
+// ═══════════════════════════════════════════════════════════
+// INICIO
+// ═══════════════════════════════════════════════════════════
+async function init() {
+  await abrirDB();
+
+  // Intentar restaurar sesión
+  if (cargarSesionLocal() && sesion) {
+    if (esOnline) {
+      // Verificar que el token sigue válido
+      try {
+        const res = await apiGet({ action: 'ping' });
+        if (res.ok) { entrarApp(sesion); return; }
+      } catch {}
+    } else {
+      // Offline: permitir entrar con sesión guardada
+      entrarApp(sesion);
+      return;
+    }
+  }
+
+  mostrarVista('vista-login');
+}
+
+// Enter en login
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+init();
+
+// ═══════════════════════════════════════════════════════════
+// SERVICE WORKER
+// ═══════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('SW registrado'))
+      .catch(err => console.warn('SW error:', err));
+  });
+}
+</script>
+</body>
+</html>
