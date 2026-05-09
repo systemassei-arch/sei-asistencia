@@ -1141,7 +1141,7 @@ function limpiarSesion() {
 async function apiPost(action, data) {
   const resp = await fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action, ...data })
   });
   return resp.json();
@@ -1152,7 +1152,6 @@ async function apiGet(params) {
   const resp = await fetch(`${API_URL}?${qs}`);
   return resp.json();
 }
-
 // ═══════════════════════════════════════════════════════════
 // LOGIN / LOGOUT
 // ═══════════════════════════════════════════════════════════
