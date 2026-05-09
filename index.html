@@ -927,6 +927,9 @@ select.input-field option { background: var(--navy-2); }
         <button class="btn btn-ghost" onclick="cargarStats()" style="margin-top:4px;">
           🔄 Actualizar estadísticas
         </button>
+		<button class="btn btn-cyan" onclick="regenerarResumen()" style="margin-top:8px;">
+		📋 REGENERAR HOJA RESUMEN
+		</button>
       </div>
     </div>
   </div>
@@ -979,7 +982,7 @@ select.input-field option { background: var(--navy-2); }
 // ═══════════════════════════════════════════════════════════
 // CONFIGURACIÓN — ⚠️ CAMBIA ESTA URL POR LA DE TU DEPLOYMENT
 // ═══════════════════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbzfEj8Lwj9qg3KBhl0WFMk_6Vxbb1KClvJyuHT62PT0RDaWaRlAKX_50tg2Kf0BRVAiPA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwiNr_FVK2pi9oSoFUwOnqasMMXKJwVEpwSvkUvXBGheeVhN1ru9aLTdgiHmn0TvUJtJQ/exec';
 
 // Coordenadas de la oficina (también en Config de Sheets,
 // pero se pueden poner aquí como fallback)
@@ -1013,6 +1016,22 @@ function abrirDB() {
   });
 }
 
+async function regenerarResumen() {
+  toast('⏳ Generando resumen...', 'info', 8000);
+  try {
+    const res = await apiGet({ 
+      action: 'regenerar_resumen', 
+      token: sesion.token 
+    });
+    if (res.ok) {
+      toast('✅ Hoja Resumen actualizada', 'ok');
+    } else {
+      toast(res.error || 'Error al generar', 'err');
+    }
+  } catch {
+    toast('Error de conexión', 'err');
+  }
+}
 async function guardarOffline(registro) {
   await abrirDB();
   return new Promise((res, rej) => {
